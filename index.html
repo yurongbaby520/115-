@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>明亮星幻 - 3D 動態藍雲報名系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: linear-gradient(135deg, #fff5f8 0%, #f0f4ff 100%);
+            color: #4a4a4a;
+            margin: 0;
+            overflow: hidden; 
+            height: 100vh;
+            width: 100vw;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        .tech-font { font-family: 'Orbitron', sans-serif; }
+
+        .metallic-text {
+            background: linear-gradient(to right, #60a5fa 0%, #f472b6 33%, #c084fc 66%, #60a5fa 100%);
+            background-size: 200% auto;
+            color: transparent;
+            -webkit-background-clip: text;
+            background-clip: text;
+            animation: shine 6s linear infinite;
+        }
+
+        @keyframes shine { to { background-position: 200% center; } }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 15px 40px rgba(244, 114, 182, 0.15);
+            position: relative;
+            z-index: 10;
+        }
+
+        .glass-panel::before {
+            content: "";
+            position: absolute;
+            top: -2px; left: -2px; right: -2px; bottom: -2px;
+            background: linear-gradient(45deg, #bae6fd, #fbcfe8, #e9d5ff, #bae6fd);
+            background-size: 400% 400%;
+            z-index: -1;
+            border-radius: inherit;
+            animation: gradientBorder 8s ease infinite;
+            opacity: 0.6;
+        }
+
+        @keyframes gradientBorder {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .input-tech {
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(96, 165, 250, 0.2);
+            border-bottom: 2px solid rgba(96, 165, 250, 0.3);
+            transition: all 0.3s ease;
+            color: #4b5563;
+        }
+
+        .input-tech:focus {
+            background: rgba(255, 255, 255, 0.8);
+            border-bottom-color: #f472b6;
+            box-shadow: 0 0 15px rgba(244, 114, 182, 0.2);
+            outline: none;
+        }
+
+        .btn-energetic {
+            background: linear-gradient(135deg, #fbcfe8 0%, #f472b6 50%, #c084fc 100%);
+            background-size: 200% auto;
+            transition: 0.5s;
+            box-shadow: 0 8px 20px rgba(244, 114, 182, 0.3);
+            color: white;
+            cursor: pointer;
+        }
+
+        .btn-energetic:hover:not(:disabled) {
+            background-position: right center;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(244, 114, 182, 0.4);
+        }
+
+        .btn-energetic:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            filter: grayscale(0.5);
+        }
+
+        .scroll-container {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            height: 100vh;
+            overflow-y: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        label { color: #6b7280; }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div class="scroll-container">
+        <div class="w-full max-w-2xl glass-panel rounded-[2.5rem] p-8 sm:p-12 animate-[fadeIn_1.5s_ease-out]">
+            <div class="text-center mb-10">
+                <h2 class="tech-font text-sky-400 tracking-[0.4em] text-xs font-bold mb-3 uppercase">Pastel Dreamscape</h2>
+                <h1 class="text-3xl sm:text-5xl font-black mb-4 metallic-text tracking-wider">星幻地球報名表</h1>
+                <p class="text-gray-500 text-sm font-light">在藍雲與晨曦間，展開您的星際冒險。</p>
+                <div class="w-24 h-[1px] mx-auto mt-8 bg-gradient-to-r from-transparent via-pink-300 to-transparent"></div>
+            </div>
+
+            <form id="registrationForm" class="space-y-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold tracking-widest uppercase">探險者姓名</label>
+                        <input type="text" name="name" id="userName" required placeholder="Name" class="w-full input-tech rounded-2xl px-5 py-3.5">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold tracking-widest uppercase">通訊代碼</label>
+                        <input type="tel" name="phone" id="userPhone" required placeholder="Phone" class="w-full input-tech rounded-2xl px-5 py-3.5">
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-xs font-bold tracking-widest uppercase">電子座標 (Email)</label>
+                    <input type="email" name="email" id="userEmail" required placeholder="hello@pastel.io" class="w-full input-tech rounded-2xl px-5 py-3.5">
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-xs font-bold tracking-widest uppercase">專業領域職位</label>
+                    <div class="relative">
+                        <select name="role" id="userRole" required class="w-full input-tech rounded-2xl px-5 py-3.5 appearance-none cursor-pointer">
+                            <option value="" disabled selected>請選擇職位</option>
+                            <option value="Pilot">?? 領航員 (Pilot)</option>
+                            <option value="Engineer">??? 工程師 (Engineer)</option>
+                            <option value="Scientist">?? 科學家 (Scientist)</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-pink-300">
+                            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" id="submitBtn" class="w-full btn-energetic font-black tracking-[0.3em] py-5 rounded-2xl uppercase text-lg">
+                    發射訊號 (JOIN NOW)
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="successModal" class="fixed inset-0 z-50 flex items-center justify-center bg-white/40 backdrop-blur-md hidden">
+        <div class="glass-panel p-10 rounded-3xl max-w-sm w-full text-center">
+            <h3 class="text-2xl font-bold metallic-text mb-6">傳輸完成</h3>
+            <p class="text-gray-500 text-sm mb-6">您的報名資料已成功寫入星際雲端試算表。</p>
+            <button onclick="location.reload()" class="btn-energetic w-full py-3 rounded-xl text-sm font-bold uppercase">返回主頁</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Three.js 3D 豐富動態背景 ---
+        let scene, camera, renderer, globe, stars, meteors = [], clouds = [], nebulas = [];
+        let mouseX = 0, mouseY = 0;
+        let time = 0;
+
+        function initThree() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 18;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 0); 
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // 1. 地球
+            const geometry = new THREE.SphereGeometry(8, 48, 48);
+            const material = new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.1,
+                emissive: 0xfbcfe8,
+                emissiveIntensity: 0.4
+            });
+            globe = new THREE.Mesh(geometry, material);
+            scene.add(globe);
+
+            // 2. 星雲 (Nebulas - 大型柔和光暈)
+            createNebulas();
+
+            // 3. 藍雲系統
+            createClouds();
+
+            // 4. 星星 (加入自訂屬性以便處理閃爍)
+            createStars();
+
+            // 5. 流星
+            createMeteor();
+
+            // 6. 燈光
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            scene.add(ambientLight);
+            const pointLight1 = new THREE.PointLight(0xfbcfe8, 1.5, 60);
+            pointLight1.position.set(10, 15, 10);
+            scene.add(pointLight1);
+            const pointLight2 = new THREE.PointLight(0xbae6fd, 1.2, 60);
+            pointLight2.position.set(-15, -10, 10);
+            scene.add(pointLight2);
+
+            animate();
+        }
+
+        function createNebulas() {
+            const nebulaCount = 4;
+            const colors = [0xfbcfe8, 0xbae6fd, 0xe9d5ff];
+            for(let i=0; i<nebulaCount; i++) {
+                const geo = new THREE.SphereGeometry(15 + Math.random() * 10, 32, 32);
+                const mat = new THREE.MeshBasicMaterial({
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    transparent: true,
+                    opacity: 0.03, // 非常淡的顏色
+                    wireframe: false
+                });
+                const nebula = new THREE.Mesh(geo, mat);
+                nebula.position.set(
+                    (Math.random() - 0.5) * 40,
+                    (Math.random() - 0.5) * 30,
+                    (Math.random() - 0.5) * 20 - 10
+                );
+                // 隨機旋轉軸與速度
+                nebula.userData = {
+                    rx: (Math.random() - 0.5) * 0.002,
+                    ry: (Math.random() - 0.5) * 0.002,
+                    rz: (Math.random() - 0.5) * 0.002
+                };
+                nebulas.push(nebula);
+                scene.add(nebula);
+            }
+        }
+
+        function createStars() {
+            const starGeometry = new THREE.BufferGeometry();
+            const starMaterial = new THREE.PointsMaterial({ 
+                size: 0.1, 
+                vertexColors: true, 
+                transparent: true, 
+                opacity: 0.8 
+            });
+            const starCoords = [], starColors = [], starPhases = [];
+            const colorPalette = [new THREE.Color(0xf472b6), new THREE.Color(0x60a5fa), new THREE.Color(0xffffff)];
+
+            for (let i = 0; i < 1500; i++) {
+                starCoords.push((Math.random() - 0.5) * 120, (Math.random() - 0.5) * 100, (Math.random() - 0.5) * 80);
+                const color = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+                starColors.push(color.r, color.g, color.b);
+                // 每個星星一個隨機的相位，用於計算閃爍
+                starPhases.push(Math.random() * Math.PI * 2); 
+            }
+            starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
+            starGeometry.setAttribute('color', new THREE.Float32BufferAttribute(starColors, 3));
+            // 將相位存入自訂屬性
+            starGeometry.setAttribute('phase', new THREE.Float32BufferAttribute(starPhases, 1));
+            
+            stars = new THREE.Points(starGeometry, starMaterial);
+            scene.add(stars);
+        }
+
+        function createClouds() {
+            const cloudCount = 8;
+            for (let i = 0; i < cloudCount; i++) {
+                const cloudGroup = new THREE.Group();
+                const particleCount = 8 + Math.floor(Math.random() * 5);
+                for (let j = 0; j < particleCount; j++) {
+                    const size = 1 + Math.random() * 2.5;
+                    const geo = new THREE.SphereGeometry(size, 16, 16);
+                    const mat = new THREE.MeshPhongMaterial({
+                        color: 0xbae6fd,
+                        transparent: true,
+                        opacity: 0.12,
+                        emissive: 0x60a5fa,
+                        emissiveIntensity: 0.2
+                    });
+                    const part = new THREE.Mesh(geo, mat);
+                    part.position.set((Math.random() - 0.5) * 5, (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3);
+                    
+                    // 記錄初始位置和縮放因子
+                    part.userData = {
+                        ox: part.position.x, oy: part.position.y, oz: part.position.z,
+                        scaleSpeed: 0.005 + Math.random() * 0.01,
+                        scaleOffset: Math.random() * Math.PI * 2
+                    };
+                    cloudGroup.add(part);
+                }
+                resetCloud(cloudGroup);
+                scene.add(cloudGroup);
+                clouds.push(cloudGroup);
+            }
+        }
+
+        function resetCloud(cloud) {
+            cloud.position.set((Math.random() - 0.5) * 60, (Math.random() - 0.5) * 40, (Math.random() - 0.5) * 15 - 5);
+            cloud.userData.speedX = (Math.random() - 0.5) * 0.02 + 0.01;
+            cloud.userData.speedY = (Math.random() - 0.5) * 0.01;
+            cloud.userData.rotSpeed = (Math.random() - 0.5) * 0.005;
+        }
+
+        function createMeteor() {
+            const meteorCount = 6;
+            for (let i = 0; i < meteorCount; i++) {
+                const geometry = new THREE.BufferGeometry();
+                const length = 3 + Math.random() * 4;
+                const vertices = new Float32Array([0, 0, 0, 0, length, 0]);
+                geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+                const material = new THREE.LineBasicMaterial({ 
+                    color: [0xf472b6, 0x60a5fa, 0xffffff][Math.floor(Math.random()*3)],
+                    transparent: true, opacity: 0.6
+                });
+                const line = new THREE.Line(geometry, material);
+                resetMeteor(line);
+                scene.add(line);
+                meteors.push(line);
+            }
+        }
+
+        function resetMeteor(line) {
+            line.position.set((Math.random() - 0.5) * 80, Math.random() * 40 + 20, (Math.random() - 0.5) * 30);
+            line.rotation.z = Math.PI / 4 + (Math.random() * 0.1);
+            line.userData.speed = Math.random() * 0.3 + 0.1;
+            line.visible = Math.random() > 0.3; // 讓流星隨機出現
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.05;
+
+            // 地球動畫：自轉 + 呼吸燈效
+            globe.rotation.y += 0.001;
+            globe.rotation.x += 0.0005;
+            globe.material.emissiveIntensity = 0.3 + Math.sin(time * 0.5) * 0.1;
+
+            // 星雲動畫：緩慢旋轉
+            nebulas.forEach(n => {
+                n.rotation.x += n.userData.rx;
+                n.rotation.y += n.userData.ry;
+                n.rotation.z += n.userData.rz;
+            });
+
+            // 星星閃爍效果 (簡單的整體透明度變化模擬)
+            stars.rotation.y -= 0.0002;
+            stars.material.opacity = 0.6 + Math.sin(time) * 0.3;
+
+            // 雲朵動畫：平移、自轉、粒子縮放呼吸
+            clouds.forEach(c => {
+                c.position.x += c.userData.speedX;
+                c.position.y += c.userData.speedY;
+                c.rotation.y += c.userData.rotSpeed;
+                
+                if (c.position.x > 40) c.position.x = -40;
+                if (c.position.x < -40) c.position.x = 40;
+
+                // 內部粒子呼吸效果
+                c.children.forEach(p => {
+                    const s = 1 + Math.sin(time * p.userData.scaleSpeed + p.userData.scaleOffset) * 0.15;
+                    p.scale.set(s, s, s);
+                });
+            });
+
+            // 流星動畫
+            meteors.forEach(m => {
+                if(m.visible) {
+                    m.position.x += m.userData.speed;
+                    m.position.y -= m.userData.speed;
+                    if (m.position.y < -40 || m.position.x > 40) resetMeteor(m);
+                } else {
+                    if(Math.random() < 0.01) resetMeteor(m); // 隨機觸發顯示
+                }
+            });
+
+            // 鼠標視角跟隨
+            camera.position.x += (mouseX - camera.position.x) * 0.02;
+            camera.position.y += (-mouseY - camera.position.y) * 0.02;
+            camera.lookAt(scene.position);
+            
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('mousemove', (e) => {
+            mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+            mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        window.onload = initThree;
+
+        // --- Apps Script 提交邏輯 ---
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbxOEVtSZ7GbuI30JX-ge2_X9az1J9hu_sB0VP4M7gWYD9acsPkkHr_Q8M7wrYbfaYwW/exec';
+        const form = document.getElementById('registrationForm');
+        const submitBtn = document.getElementById('submitBtn');
+
+        form.addEventListener('submit', e => {
+            e.preventDefault();
+            submitBtn.disabled = true;
+            submitBtn.innerText = '資料傳輸中...';
+
+            const formData = new FormData();
+            formData.append('name', document.getElementById('userName').value);
+            formData.append('phone', document.getElementById('userPhone').value);
+            formData.append('email', document.getElementById('userEmail').value);
+            formData.append('role', document.getElementById('userRole').value);
+
+            fetch(scriptURL, { method: 'POST', body: formData, mode: 'no-cors' })
+            .then(() => {
+                document.getElementById('successModal').classList.remove('hidden');
+                submitBtn.innerText = '發射完成';
+                form.reset();
+            })
+            .catch(error => {
+                console.error('Error!', error.message);
+                alert('傳輸失敗，請檢查網路連線或稍後再試。');
+                submitBtn.disabled = false;
+                submitBtn.innerText = '重新發射';
+            });
+        });
+    </script>
+</body>
+</html>
